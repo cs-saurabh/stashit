@@ -26,15 +26,32 @@ export function getStashedItems() {
   }));
 }
 
-// Updated function to recursively delete all files and folders in the stash directory
-export function clearStash() {
+// Updated function to move items to the trash using AppleScript
+export async function clearStash() {
   ensureStashDir();
   const items = fs.readdirSync(STASH_DIR);
 
-  items.forEach((item) => {
-    const itemPath = path.join(STASH_DIR, item);
-    fs.rmSync(itemPath, { recursive: true, force: true });
-  });
+  if (items.length === 0) {
+    console.log("Stash directory is already empty.");
+    return;
+  }
 
-  console.log("Stash directory cleared successfully.");
+  // Generate AppleScript to move all items to the trash
+  const appleScript = `
+  tell application "Finder"
+    set stashPath to POSIX file "${STASH_DIR}" as alias
+    set stashItems to every item of stashPath
+    repeat with itemRef in stashItems
+      move itemRef to trash
+    end repeat
+  end tell
+  `;
+
+  try {
+    execSync(`osascript -e '${appleScript}'`);
+    console.log("All stashed items moved to trash.");
+  } catch (error) {
+    console.error("Failed to move items to trash:", error);
+    throw error;
+  }
 }
